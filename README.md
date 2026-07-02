@@ -1,69 +1,218 @@
-Cloudflare DDNS PRO
-Cloudflare DDNS PRO es una utilidad de sistema robusta y profesional diseñada para gestionar registros DNS en Cloudflare. Combina la automatización de un cliente DDNS (para registros tipo A) con la flexibilidad de un gestor de registros estáticos (CNAME, TXT, etc.), permitiéndote controlar toda tu infraestructura DNS desde un único archivo de configuración local.
+# Cloudflare DDNS PRO
 
-Características Principales
-Sincronización Automática: Mantiene tus registros tipo A actualizados con tu IP pública dinámica.
+Cloudflare DDNS PRO es un cliente **Dynamic DNS (DDNS)** avanzado para **Cloudflare** escrito en **Bash**.
 
-Gestión de Registros Múltiples: Soporte nativo para registros A, CNAME, TXT, MX, etc.
+A diferencia de otros clientes DDNS, este proyecto permite administrar **múltiples dominios y zonas DNS** desde un único archivo de configuración, gestionando automáticamente registros **A (DDNS)** y **CNAME (estáticos)** de forma centralizada.
 
-Seguridad: Ejecución aislada, validación de estado mediante --dry-run y protección contra ejecuciones simultáneas (flock).
+---
 
-Ecosistema Systemd: Integración total con systemd (timer cada 5 minutos, servicios, rotación de logs).
+# Características
 
-Configuración Inteligente: Soporte multi-zona y multi-dominio con importación automática desde la API de Cloudflare.
+- 🌐 **Soporte Multi-Zona**: administra todos tus dominios desde un solo archivo.
+- 🔄 **DDNS Nativo**: actualización automática de IP para registros **A**.
+- 📌 **Registros Estáticos**: gestión de registros **A** (IP fija) y **CNAME**.
+- 📥 **Importación Inteligente**: el instalador importa automáticamente las zonas existentes desde Cloudflare.
+- 🟠 **Control de Proxy**: configuración individual de **PROXY** (nube naranja) o **NO_PROXY** (nube gris) para cada registro.
+- 🔒 **Seguro y Robusto**:
+  - `set -euo pipefail`
+  - Lockfile para evitar ejecuciones simultáneas
+  - Modo **Dry Run**
+  - Validación de errores
+  - Logs sin códigos ANSI
+- ⚙️ **Automatización completa**:
+  - Instalador interactivo
+  - Desinstalador automático
+  - Integración con **systemd**
+  - Rotación de logs mediante **logrotate**
 
-Instalación
-Asegúrate de estar en la carpeta donde descargaste los archivos.
+---
 
-Dale permisos de ejecución al instalador:
+# Requisitos
 
-Bash
-chmod +x install.sh
-Ejecuta el instalador con privilegios de administrador:
+- Linux
+- Bash 4+
+- curl
+- jq
+- systemd (opcional, recomendado)
 
-Bash
+---
+
+# Instalación
+
+Clonar el repositorio:
+
+```bash
+git clone https://github.com/Nyquist-CABJ/cloudflare-ddns-pro.git
+cd cloudflare-ddns-pro
+```
+
+Ejecutar el instalador:
+
+```bash
 sudo ./install.sh
-El instalador instalará las dependencias necesarias (curl, jq), configurará los permisos del sistema y ejecutará un asistente para importar tus zonas actuales.
+```
 
-Configuración
-Una vez instalado, el archivo principal reside en /etc/cloudflare-ddns/cloudflare-ddns.conf.
+El instalador:
 
-Sintaxis del archivo
+- Detecta automáticamente el gestor de paquetes (`apt`, `dnf`, `yum` o `pacman`).
+- Instala las dependencias necesarias (`curl`, `jq`, `bsdmainutils`).
+- Configura permisos y directorios.
+- Importa automáticamente las zonas y registros existentes desde Cloudflare.
+- Configura el servicio y el temporizador de **systemd**.
 
-# Token global
+---
+
+# Configuración
+
+El archivo de configuración se encuentra en:
+
+```text
+/etc/cloudflare-ddns/cloudflare-ddns.conf
+```
+
+## Formato de registros
+
+La sintaxis es:
+
+```text
+HOST | TIPO | PROXY | CONTENIDO
+```
+
+Ejemplo:
+
+```ini
 TOKEN=tu_api_token_aqui
 
-[tudominio.com]
-ZONE=tu_zone_id_aqui
+[example.ar]
+ZONE=TU_DOMAIN_ID_AQUI
 
-# Host        Tipo    Proxy      Contenido
-@             A       PROXY      
-www           A       PROXY      
-vpn           A       NO_PROXY   
-app           CNAME   PROXY      example.ddns.net
-spf           TXT     NO_PROXY   "v=spf1 include:_spf.google.com ~all"
-Registro A vacío: Si dejas la columna de contenido vacía, el script inyectará automáticamente tu IP pública.
+# Host      Tipo    Proxy      Contenido
+@            A       PROXY
+www          A       PROXY
+vpn          A       NO_PROXY
+app          CNAME   PROXY      example.ddns.net
+```
 
-Registro A fijo: Si pones una IP, el script la mantendrá estática.
+### Registros tipo A
 
-@: Representa la raíz del dominio.
+Si la columna **Contenido** queda vacía, el script utilizará automáticamente la IP pública actual (DDNS).
 
-Gestión y Monitoreo
-Verificar estado del timer:
+```text
+www    A    PROXY
+```
 
-Bash
-systemctl status cloudflare-ddns.timer
-Revisar logs en tiempo real:
+También es posible especificar una IP fija.
 
-Bash
-journalctl -u cloudflare-ddns.service -f
-Prueba de seguridad (Dry Run):
-Si quieres ver qué cambios realizaría el script sin tocar Cloudflare:
+```text
+server A    PROXY    192.168.1.100
+```
 
-Bash
+### Registros tipo CNAME
+
+Para los registros **CNAME** es obligatorio indicar el dominio de destino.
+
+```text
+app    CNAME    PROXY    nyquist.ddns.net
+```
+
+---
+
+# Ejecución
+
+## Dry Run
+
+Simula todas las operaciones sin modificar ningún registro en Cloudflare.
+
+```bash
 sudo /usr/local/bin/cloudflare-ddns --dry-run
-Desinstalación
-Para remover completamente la herramienta y limpiar los archivos del sistema:
+```
 
-Bash
+---
+
+## Ejecución manual
+
+```bash
+sudo /usr/local/bin/cloudflare-ddns
+```
+
+---
+
+# Monitorización
+
+El servicio utiliza **systemd**.
+
+Consultar el estado del temporizador:
+
+```bash
+systemctl status cloudflare-ddns.timer
+```
+
+Consultar los logs en tiempo real:
+
+```bash
+journalctl -u cloudflare-ddns.service -f
+```
+
+Consultar el log generado por la aplicación:
+
+```text
+/var/log/cloudflare-ddns.log
+```
+
+---
+
+# Estructura del proyecto
+
+```text
+cloudflare-ddns-pro/
+├── cloudflare-ddns.sh          # Motor principal
+├── install.sh                  # Instalador interactivo
+├── uninstall.sh                # Desinstalador automático
+├── cloudflare-ddns.service     # Servicio Systemd
+├── cloudflare-ddns.timer       # Temporizador Systemd
+├── cloudflare-ddns.logrotate   # Rotación de logs
+├── LICENSE
+└── README.md
+```
+
+---
+
+# Desinstalación
+
+Para eliminar completamente la herramienta:
+
+```bash
 sudo ./uninstall.sh
+```
+
+El desinstalador elimina:
+
+- Ejecutable
+- Servicio systemd
+- Timer
+- Configuración (opcional)
+- Logs (opcional)
+- Caché
+- Logrotate
+
+---
+
+# Licencia
+
+Este proyecto se distribuye bajo la licencia **MIT**.
+
+Consulta el archivo **LICENSE** para más información.
+
+---
+
+# Autor
+
+**Daniel Finke**
+
+GitHub: https://github.com/Nyquist-CABJ
+
+---
+
+## ⭐ ¿Te resultó útil?
+
+Si este proyecto te ha sido útil, considera darle una **⭐** al repositorio para apoyar el desarrollo.
