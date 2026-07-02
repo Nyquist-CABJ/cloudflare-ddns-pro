@@ -46,7 +46,12 @@ git clone https://github.com/Nyquist-CABJ/cloudflare-ddns-pro.git
 cd cloudflare-ddns-pro
 ```
 
+```bash
+chmod +x *.sh
+```
+
 Ejecutar el instalador:
+
 
 ```bash
 sudo ./install.sh
