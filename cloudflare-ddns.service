@@ -1,0 +1,12 @@
+[Unit]
+Description=Cloudflare DDNS Updater
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=USER_PLACEHOLDER
+ExecStart=/usr/local/bin/cloudflare-ddns
+
+[Install]
+WantedBy=multi-user.target

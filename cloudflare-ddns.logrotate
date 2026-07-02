@@ -1,0 +1,8 @@
+/var/log/cloudflare-ddns.log {
+    weekly
+    rotate 4
+    compress
+    missingok
+    notifempty
+    create 0640 USER_PLACEHOLDER USER_PLACEHOLDER
+}
